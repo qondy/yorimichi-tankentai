@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大人の寄り道探検隊 — 機能紹介</title>
+<meta name="description" content="キャリアの8割は偶然で決まる。たまたま訪れた機会を寄り道ログで逃さず育て、好奇心・持続性・楽観性・柔軟性・冒険心の5つの力を毎日5分のお題で鍛える、ベテラン世代のための探検アプリ。">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6b8e23">
+<meta property="og:title" content="大人の寄り道探検隊 — 機能紹介">
+<meta property="og:image" content="https://yorimichi-tankentai.vercel.app/ogp.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c1: #6b8e23;
+    --c2: #5c7a1e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    background: #1a1a1a;
+    color: #ececec;
+    line-height: 1.7;
+  }
+  a { color: inherit; text-decoration: none; }
+  .topbar {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 24px 20px 0;
+  }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    color: #9a9a9a;
+    transition: color .15s ease;
+  }
+  .back-link:hover { color: #fff; }
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    background: var(--c1);
+    margin: 24px 20px 0;
+    border-radius: 24px;
+    padding: 64px 24px;
+    text-align: center;
+  }
+  .hero::before, .hero::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: #ffffff;
+    opacity: 0.07;
+    filter: blur(10px);
+  }
+  .hero::before { width: 240px; height: 240px; top: -80px; left: -60px; }
+  .hero::after { width: 300px; height: 300px; bottom: -120px; right: -80px; }
+  .badge {
+    position: relative;
+    width: 128px;
+    height: 128px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.94);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--c1);
+    box-shadow: 0 0 0 14px rgba(255,255,255,0.14);
+  }
+  .category-pill {
+    position: relative;
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 999px;
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    position: relative;
+    margin: 0 0 12px;
+    font-size: clamp(28px, 5vw, 40px);
+    font-weight: 800;
+    color: #fff;
+  }
+  .hero p.tagline {
+    position: relative;
+    margin: 0 auto 32px;
+    max-width: 520px;
+    font-size: 17px;
+    color: rgba(255,255,255,0.88);
+  }
+  .cta {
+    position: relative;
+    display: inline-block;
+    background: #fff;
+    color: #1a1a1a;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 14px 36px;
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    transition: transform .15s ease;
+  }
+  .cta:hover { transform: translateY(-2px); }
+
+  .features {
+    max-width: 880px;
+    margin: 56px auto 0;
+    padding: 0 20px;
+  }
+  .features h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 24px;
+    color: #fff;
+  }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .feature-card {
+    background: #20251a;
+    border: 1px solid #363f26;
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .feature-icon {
+    color: var(--c1);
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  .feature-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: #fff;
+  }
+  .feature-desc {
+    font-size: 15px;
+    color: #c3cbb0;
+    margin: 0;
+  }
+
+  .steps {
+    max-width: 880px;
+    margin: 40px auto 0;
+    padding: 0 20px;
+  }
+  .steps h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 20px;
+    color: #fff;
+  }
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 14px 0;
+    border-top: 1px solid #363f26;
+  }
+  .step:first-of-type { border-top: 0; }
+  .step-num {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--c1);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step p { margin: 0; font-size: 15px; color: #d0d7bd; }
+  .step strong { color: #fff; }
+
+  .note {
+    max-width: 880px;
+    margin: 24px auto 0;
+    padding: 0 20px;
+    font-size: 13px;
+    color: #98a37c;
+  }
+
+  .footer-cta {
+    max-width: 880px;
+    margin: 56px auto 0;
+    padding: 0 20px 64px;
+    text-align: center;
+  }
+  .footer-cta .cta {
+    background: var(--c1);
+    color: #fff;
+    box-shadow: none;
+  }
+  .footer-links {
+    margin-top: 20px;
+    font-size: 13px;
+    color: #98a37c;
+  }
+  .footer-links a { color: #9a9a9a; }
+  .footer-links a:hover { color: #fff; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back-link" href="https://apps.yuji-nakamura.com/">← アプリ一覧に戻る</a>
+  </div>
+
+  <section class="hero">
+    <span class="category-pill">学び・成長</span>
+    <div class="badge"><svg width="72" height="72" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M32 8 V56"/><path d="M32 14 H48 L54 20 L48 26 H32"/><path d="M32 32 H16 L10 38 L16 44 H32"/><path d="M22 56 H42"/></svg></div>
+    <h1>大人の寄り道探検隊</h1>
+    <p class="tagline">人のキャリアの8割は、予想しなかった偶然で決まるといわれます。大事なのは、たまたま訪れた機会を逃さないこと。偶然をメモして育て、好奇心・持続性・楽観性・柔軟性・冒険心の5つの力を鍛える、ベテラン世代のための探検アプリです。</p>
+    <a class="cta" href="https://yorimichi-tankentai.vercel.app">アプリを使ってみる →</a>
+  </section>
+
+  <section class="features">
+    <h2>できること</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="28" cy="28" r="16"/><path d="M40 40 L54 54"/><path d="M28 20 V36"/><path d="M20 28 H36"/></svg></div>
+        <h3 class="feature-title">偶然をメモする（寄り道ログ）</h3>
+        <p class="feature-desc">出会い・誘い・頼まれごと・気になった情報など、たまたま訪れた機会をすぐメモ。「寄ってみる・ひとまず保留・今回は見送る」から選べます。保留にしたものは、見直しの日が来たら「きょう」画面でお知らせします。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M32 54 V30"/><path d="M32 38 Q20 38 16 26 Q28 24 32 34"/><path d="M32 32 Q44 30 48 18 Q36 16 32 28"/><path d="M22 54 H42"/></svg></div>
+        <h3 class="feature-title">種→芽→花→実で育てる</h3>
+        <p class="feature-desc">寄ってみた偶然は、何かが動き出したら「芽」、手応えやつながりが生まれたら「花」、人生や仕事に実ったら「実」へ。その後どうなったかも書き残せるので、何年か後に「あの偶然が始まりだった」と振り返れます。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="8" width="40" height="48" rx="4"/><path d="M20 20 H44"/><path d="M20 30 H44"/><path d="M20 40 H34"/></svg></div>
+        <h3 class="feature-title">探検道具図鑑（5つの力）</h3>
+        <p class="feature-desc">好奇心（虫めがね）・持続性（水筒）・楽観性（晴れの帽子）・柔軟性（地図とコンパス）・冒険心（リュック）。偶然をキャリアに変えるといわれる5つの力を、なぜ必要か・鍛えるコツつきで紹介します。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="10"/><circle cx="32" cy="32" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+        <h3 class="feature-title">きょうのお題（5分）</h3>
+        <p class="feature-desc">「いつもと違う道で帰る」「迷っている誘いに今日返事をする」など、暮らしや仕事の中ですぐ試せるお題が毎日出ます。自己チェックがいちばん低い力のお題が優先して出るので、苦手を自然に鍛えられます。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M32 8 L54 24 L46 52 H18 L10 24 Z"/><path d="M32 20 L44 28 L40 44 H24 L20 28 Z"/></svg></div>
+        <h3 class="feature-title">5つの力レーダー</h3>
+        <p class="feature-desc">月に1回、5つの力を5段階で自己チェック。レーダーチャートで先月との違いが見えます。偶然を見送ったときに「足りなかった力」を選んでおくと、どの力を鍛えればよいかも教えてくれます。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 50 H52"/><path d="M18 50 V36"/><path d="M28 50 V24"/><path d="M38 50 V30"/><path d="M48 50 V16"/></svg></div>
+        <h3 class="feature-title">探検記録</h3>
+        <p class="feature-desc">寄り道した割合、育ち具合、力ごとのレベル、探検カレンダーで続けた成果が見えます。経験値で見習い隊員から隊員・副隊長・隊長・探検家へと階級が上がります。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="steps">
+    <h2>使い方</h2>
+    <div class="step">
+      <span class="step-num">1</span>
+      <p><strong>Googleでログイン</strong>：記録はあなた専用の領域に保存され、スマホとパソコンで同じデータを見られます。</p>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <p><strong>偶然をメモする</strong>：「おや？」と思った出会いや誘いがあったら、その場で「偶然をメモする」。迷ったら「ひとまず保留」で大丈夫です。</p>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <p><strong>寄ってみて、育てる</strong>：寄ってみた偶然に動きがあったら「芽になった！」のボタンで次の段階へ。その後どうなったかも書いておきましょう。</p>
+    </div>
+    <div class="step">
+      <span class="step-num">4</span>
+      <p><strong>毎日5分のお題で力を鍛える</strong>：月に1回の自己チェックで5つの力をふりかえると、伸ばしたい力のお題が優先して出るようになります。</p>
+    </div>
+  </section>
+
+  <p class="note">※ 見送った偶然も立派な記録です。理由と「足りなかった力」を残しておくと、次に似た機会が来たとき、前に見送った記録をメモ画面で見返せます。</p>
+
+  <section class="footer-cta">
+    <a class="cta" href="https://yorimichi-tankentai.vercel.app">今すぐ使ってみる →</a>
+    <p class="footer-links"><a href="https://apps.yuji-nakamura.com/">他のアプリも見る</a></p>
+  </section>
+</body>
+</html>

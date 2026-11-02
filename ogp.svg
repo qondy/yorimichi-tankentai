@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#6b8e23"/>
+  <g transform="translate(600 240) scale(3.6) translate(-32 -32)" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M32 8 V56"/><path d="M32 14 H48 L54 20 L48 26 H32"/><path d="M32 32 H16 L10 38 L16 44 H32"/><path d="M22 56 H42"/></g>
+  <text x="600" y="480" font-size="76" font-weight="600" text-anchor="middle" fill="#ffffff" font-family="-apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif" letter-spacing="-2">大人の寄り道探検隊</text>
+</svg>

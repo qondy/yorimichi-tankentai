@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-J41Z0NHW20"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-J41Z0NHW20', { 'app_name': 'yorimichi-tankentai' });
+  </script>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6b8e23">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大人の寄り道探検隊</title>
+  <meta name="description" content="キャリアの8割は偶然で決まる。たまたま訪れた出会い・誘い・頼まれごとを寄り道ログに記録して「種→芽→花→実」と育て、好奇心・持続性・楽観性・柔軟性・冒険心の5つの力を毎日5分のお題で鍛える、ベテラン世代のための探検アプリ。">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+  <meta property="og:title" content="大人の寄り道探検隊">
+  <meta property="og:description" content="キャリアの8割は偶然で決まる。たまたまの機会を逃さず、5つの力で人生の寄り道を楽しもう。">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://yorimichi-tankentai.vercel.app/ogp.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://yorimichi-tankentai.vercel.app/ogp.png">
+</head>
+<body>
+
+  <!-- ログイン画面 -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <span class="login-card__logo"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 8 V56"/><path d="M32 14 H48 L54 20 L48 26 H32"/><path d="M32 32 H16 L10 38 L16 44 H32"/><path d="M22 56 H42"/></svg></span>
+      <h1 class="login-card__title">大人の寄り道探検隊</h1>
+      <p class="login-card__tagline">キャリアの8割は偶然で決まる。<br>たまたまの機会を逃さず、人生の寄り道を楽しもう。</p>
+      <button id="btn-google-login" class="google-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Googleでログイン
+      </button>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
+    <header class="app-header">
+      <span class="app-header__brand"><svg width="28" height="28" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-7px"><path d="M32 8 V56"/><path d="M32 14 H48 L54 20 L48 26 H32"/><path d="M32 32 H16 L10 38 L16 44 H32"/><path d="M22 56 H42"/></svg> 大人の寄り道探検隊</span>
+      <nav class="app-header__nav">
+        <a href="about.html" class="app-header__about-link">アプリについて</a>
+        <div id="user-info" class="app-header__user hidden">
+          <img id="user-avatar" class="app-header__avatar" src="" alt="" />
+          <span id="user-name" class="app-header__name"></span>
+          <button id="btn-logout" class="btn btn--ghost btn--sm">ログアウト</button>
+        </div>
+      </nav>
+    </header>
+
+    <div class="tabs-bar">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tabs__btn is-active" role="tab" data-tab="today" aria-selected="true">きょう<span class="tabs__count" id="count-due"></span></button>
+        <button type="button" class="tabs__btn" role="tab" data-tab="log" aria-selected="false">寄り道</button>
+        <button type="button" class="tabs__btn" role="tab" data-tab="zukan" aria-selected="false">図鑑</button>
+        <button type="button" class="tabs__btn" role="tab" data-tab="record" aria-selected="false">記録</button>
+      </div>
+    </div>
+
+    <main class="app-main">
+
+      <!-- きょう -->
+      <section class="panel" data-panel="today">
+        <div class="today-head">
+          <p class="today-head__date" id="today-date"></p>
+          <h2 class="today-head__title">きょうの探検</h2>
+        </div>
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-card__value" id="today-go">0</div><div class="stat-card__label">寄り道した偶然</div></div>
+          <div class="stat-card"><div class="stat-card__value" id="today-fruit">0</div><div class="stat-card__label">実った偶然</div></div>
+          <div class="stat-card"><div class="stat-card__value" id="today-streak">0日</div><div class="stat-card__label">連続探検</div></div>
+        </div>
+
+        <button type="button" id="btn-catch" class="catch-btn">
+          <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="28" cy="28" r="16"/><path d="M40 40 L54 54"/><path d="M28 20 V36"/><path d="M20 28 H36"/></svg>
+          <span class="catch-btn__body">
+            <span class="catch-btn__title">偶然をメモする</span>
+            <span class="catch-btn__desc">出会い・誘い・頼まれごと・気になった情報など</span>
+          </span>
+        </button>
+
+        <div id="due-section" class="section hidden">
+          <div class="section__head">
+            <h3 class="section__title">見直しの日が来た保留</h3>
+            <p class="section__desc">保留にしていた偶然です。寄ってみるか、もう少し待つか、今回は見送るか決めましょう。</p>
+          </div>
+          <div id="due-list" class="card-list"></div>
+        </div>
+
+        <div id="assess-reminder" class="reminder hidden">
+          <p class="reminder__text">今月の自己チェックがまだです。5つの力をふりかえると、伸ばしたい力のお題が優先して出るようになります。</p>
+          <button type="button" id="btn-assess-reminder" class="btn btn--primary btn--sm">自己チェックする</button>
+        </div>
+
+        <article class="drill-card" id="drill-card">
+          <div class="drill-card__head">
+            <span class="skill-mark" id="drill-mark">好</span>
+            <div>
+              <p class="drill-card__skill" id="drill-skill"></p>
+              <p class="drill-card__reason" id="drill-reason"></p>
+            </div>
+          </div>
+          <p class="drill-card__label">きょうのお題（5分）</p>
+          <p class="drill-card__text" id="drill-text"></p>
+          <p class="drill-card__tip" id="drill-tip"></p>
+          <div class="drill-card__actions">
+            <button type="button" id="btn-drill-done" class="btn btn--primary">やってみた！</button>
+            <button type="button" id="btn-drill-next" class="btn btn--ghost btn--sm">別のお題</button>
+          </div>
+        </article>
+
+        <div class="section">
+          <div class="section__head">
+            <h3 class="section__title">ほかの力で稽古する</h3>
+          </div>
+          <div class="filter-chips" id="today-power-chips" role="radiogroup"></div>
+        </div>
+
+        <div class="section">
+          <div class="section__head">
+            <h3 class="section__title">きょうの記録</h3>
+          </div>
+          <div id="today-list" class="card-list"></div>
+        </div>
+      </section>
+
+      <!-- 寄り道ログ -->
+      <section class="panel hidden" data-panel="log">
+        <div class="section__head">
+          <h2 class="section__title">寄り道ログ</h2>
+          <p class="section__desc">出会った偶然の一覧です。寄ってみた偶然は「種→芽→花→実」と育てていきましょう。見送った偶然も、次に似た機会が来たときの判断材料になります。</p>
+        </div>
+        <div class="search-field">
+          <input type="search" id="input-search" placeholder="キーワードで探す" maxlength="40" aria-label="キーワードで探す" />
+        </div>
+        <div class="filter-chips" id="log-chips" role="radiogroup"></div>
+        <div id="log-list" class="card-list"></div>
+      </section>
+
+      <!-- 道具図鑑 -->
+      <section class="panel hidden" data-panel="zukan">
+        <div class="section__head">
+          <h2 class="section__title">探検道具図鑑</h2>
+          <p class="section__desc">偶然をキャリアに変えるといわれる5つの力を、探検隊の道具にたとえました。人のキャリアの8割は、予想しなかった偶然で決まるといわれます（計画的偶発性理論）。大事なのは、たまたま訪れた機会を逃さないことです。</p>
+        </div>
+        <div id="zukan-list" class="card-list"></div>
+      </section>
+
+      <!-- 探検記録 -->
+      <section class="panel hidden" data-panel="record">
+        <div class="title-card">
+          <p class="title-card__label">いまの階級</p>
+          <p class="title-card__name" id="stat-title">見習い隊員</p>
+          <p class="title-card__xp"><strong id="stat-xp">0</strong> XP</p>
+          <div class="title-card__bar"><div class="title-card__fill" id="stat-title-fill"></div></div>
+          <p class="title-card__next" id="stat-next"></p>
+        </div>
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-card__value" id="stat-chances">0</div><div class="stat-card__label">メモした偶然</div></div>
+          <div class="stat-card"><div class="stat-card__value" id="stat-rate">-</div><div class="stat-card__label">寄り道した割合</div></div>
+          <div class="stat-card"><div class="stat-card__value" id="stat-practice">0</div><div class="stat-card__label">稽古の回数</div></div>
+        </div>
+        <p class="xp-rule">偶然をメモすると5XP、寄ってみると＋5XP。芽が出たら＋5、花が咲いたら＋15、実ったら＋35XP。稽古1回で10XP（気づきを書いたら＋5）。力ごとに30XPでレベルが上がります。</p>
+
+        <div class="section">
+          <div class="section__head">
+            <h3 class="section__title">寄ってみた偶然の育ち具合</h3>
+          </div>
+          <div id="stage-funnel" class="stage-funnel"></div>
+        </div>
+
+        <div class="section">
+          <div class="section__head section__head--row">
+            <h3 class="section__title">5つの力のレーダーチャート</h3>
+            <button type="button" id="btn-assess" class="btn btn--ghost btn--sm">自己チェックする</button>
+          </div>
+          <div id="radar" class="radar"></div>
+          <p class="radar__legend" id="radar-legend"></p>
+          <p class="radar__memo hidden" id="radar-memo"></p>
+        </div>
+
+        <div class="section">
+          <div class="section__head">
+            <h3 class="section__title">力ごとのレベル</h3>
+          </div>
+          <div id="power-levels" class="field-levels"></div>
+          <p class="pass-insight hidden" id="pass-insight"></p>
+        </div>
+
+        <div class="section">
+          <div class="section__head section__head--row">
+            <h3 class="section__title" id="cal-title"></h3>
+            <div class="cal-nav">
+              <button type="button" id="btn-cal-prev" class="btn btn--ghost btn--sm" aria-label="前の月">‹</button>
+              <button type="button" id="btn-cal-next" class="btn btn--ghost btn--sm" aria-label="次の月">›</button>
+            </div>
+          </div>
+          <div id="calendar" class="calendar"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <p>© 2026 Yuji Nakamura. All rights reserved.</p>
+      <p><a href="https://apps.yuji-nakamura.com/" target="_blank" rel="noopener">他のアプリを見る →</a></p>
+    </footer>
+
+    <a href="about.html" class="about-btn"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="32" cy="32" r="20"/><circle cx="32" cy="22" r="1.5" fill="currentColor" stroke="none"/><line x1="32" y1="30" x2="32" y2="44"/></svg> アプリについて</a>
+    <button type="button" id="btn-fab" class="fab" aria-label="偶然をメモする"><svg width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" aria-hidden="true"><path d="M32 12 V52"/><path d="M12 32 H52"/></svg></button>
+    <button id="feedback-btn" class="feedback-btn" aria-label="ご意見・ご要望"><svg width="22" height="22" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-6px"><rect x="8" y="14" width="48" height="30" rx="8"/><path d="M22 44 L14 54 V44"/></svg> ご意見</button>
+  </div>
+
+  <!-- 偶然のメモ -->
+  <div id="chance-modal-overlay" class="dialog-overlay">
+    <form id="chance-form" class="modal">
+      <div class="modal__head">
+        <div class="modal__title" id="chance-modal-title">偶然をメモする</div>
+        <button type="button" id="btn-chance-close" class="modal__close" aria-label="閉じる">&times;</button>
+      </div>
+      <div class="field">
+        <span class="field__label">どんな偶然？</span>
+        <div id="kind-chips" class="filter-chips filter-chips--tight" role="radiogroup"></div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="input-title">何があった？</label>
+        <textarea id="input-title" maxlength="200" placeholder="例：駅で昔の同僚に再会。地域の勉強会に誘われた" required></textarea>
+      </div>
+      <div id="chance-past" class="past-hint hidden"></div>
+      <div class="field">
+        <label class="field__label" for="input-chance-date">出会った日</label>
+        <input type="date" id="input-chance-date" required />
+      </div>
+      <div class="field">
+        <span class="field__label">どうする？</span>
+        <div id="choice-options" class="segmented" role="radiogroup"></div>
+      </div>
+      <div class="field" id="hold-field">
+        <label class="field__label" for="input-hold-until">いつ見直す？</label>
+        <div id="hold-chips" class="filter-chips filter-chips--tight"></div>
+        <input type="date" id="input-hold-until" />
+      </div>
+      <div class="field" id="stage-field">
+        <span class="field__label">育ち具合</span>
+        <div id="stage-chips" class="filter-chips filter-chips--tight" role="radiogroup"></div>
+      </div>
+      <div class="field" id="story-field">
+        <label class="field__label" for="input-story">その後どうなった？<span class="field__hint">任意</span></label>
+        <textarea id="input-story" maxlength="500" placeholder="例：勉強会で知り合った人から、講師の仕事を頼まれた"></textarea>
+      </div>
+      <div class="field">
+        <span class="field__label" id="powers-label">どの力で寄り道できた？<span class="field__hint">いくつでも</span></span>
+        <div id="power-chips" class="filter-chips filter-chips--tight"></div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="input-note" id="note-label">メモ<span class="field__hint">任意</span></label>
+        <textarea id="input-note" maxlength="300" placeholder="例：最初は迷ったけれど、行ってみたら楽しかった"></textarea>
+      </div>
+      <div class="modal__actions">
+        <button type="button" id="btn-chance-cancel" class="btn btn--ghost">キャンセル</button>
+        <button type="submit" id="btn-chance-submit" class="btn btn--primary">メモする</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 稽古の記録 -->
+  <div id="practice-modal-overlay" class="dialog-overlay">
+    <form id="practice-form" class="modal">
+      <div class="modal__head">
+        <div class="modal__title" id="practice-modal-title">稽古を記録する</div>
+        <button type="button" id="btn-practice-close" class="modal__close" aria-label="閉じる">&times;</button>
+      </div>
+      <div class="field">
+        <span class="field__label">鍛えた力</span>
+        <div id="practice-power-chips" class="filter-chips filter-chips--tight" role="radiogroup"></div>
+      </div>
+      <p class="modal__summary hidden" id="practice-drill"></p>
+      <div class="field">
+        <label class="field__label" for="input-date">やった日</label>
+        <input type="date" id="input-date" required />
+      </div>
+      <div class="field">
+        <label class="field__label" for="input-result">やってみてどうだった？</label>
+        <textarea id="input-result" maxlength="500" placeholder="例：いつもと違う道で帰ったら、新しいパン屋を見つけた" required></textarea>
+      </div>
+      <div class="field">
+        <span class="field__label">手応えは？</span>
+        <div id="feel-options" class="segmented" role="radiogroup"></div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="input-insight">気づき・次はこうする<span class="field__hint">任意・+5XP</span></label>
+        <textarea id="input-insight" maxlength="500" placeholder="例：同じ毎日でも、見方を変えると発見がある"></textarea>
+      </div>
+      <div class="modal__actions">
+        <button type="button" id="btn-practice-cancel" class="btn btn--ghost">キャンセル</button>
+        <button type="submit" id="btn-practice-submit" class="btn btn--primary">記録する</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 自己チェック -->
+  <div id="assess-modal-overlay" class="dialog-overlay">
+    <form id="assess-form" class="modal">
+      <div class="modal__head">
+        <div class="modal__title" id="assess-modal-title">今月の自己チェック</div>
+        <button type="button" id="btn-assess-close" class="modal__close" aria-label="閉じる">&times;</button>
+      </div>
+      <p class="modal__lead">5つの力を、いまの自分の感覚で5段階で選んでください。</p>
+      <p class="score-scale" id="score-scale"></p>
+      <div id="assess-rows" class="assess-rows"></div>
+      <div class="field">
+        <label class="field__label" for="input-assess-memo">今月のひとこと<span class="field__hint">任意</span></label>
+        <textarea id="input-assess-memo" maxlength="300" placeholder="例：誘いに乗れるようになってきた。来月は続ける力を意識したい"></textarea>
+      </div>
+      <div class="modal__actions">
+        <button type="button" id="btn-assess-cancel" class="btn btn--ghost">キャンセル</button>
+        <button type="submit" id="btn-assess-submit" class="btn btn--primary">保存する</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 確認ダイアログ（カスタムUI） -->
+  <div id="confirm-dialog-overlay" class="dialog-overlay">
+    <div class="dialog">
+      <div class="dialog__title" id="confirm-dialog-title">削除しますか？</div>
+      <div class="dialog__text" id="confirm-dialog-text">削除すると元に戻せません。</div>
+      <div class="dialog__actions">
+        <button id="btn-confirm-cancel" class="btn btn--ghost">キャンセル</button>
+        <button id="btn-confirm-ok" class="btn btn--danger">削除する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 要望送信モーダル -->
+  <div id="feedback-modal-overlay" class="dialog-overlay">
+    <div class="modal">
+      <div class="modal__head">
+        <div class="modal__title">ご意見・ご要望</div>
+        <button id="btn-feedback-close" class="modal__close" aria-label="閉じる">&times;</button>
+      </div>
+      <textarea id="input-feedback-message" rows="5" maxlength="2000" placeholder="ご意見・ご要望・バグ報告など、なんでもどうぞ"></textarea>
+      <div class="modal__actions">
+        <button id="btn-feedback-send" class="btn btn--primary">送信する</button>
+      </div>
+      <p class="modal__note">送信内容は開発者に届きます。個人情報は入力しないでください。</p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
