@@ -1,4 +1,4 @@
-import { Chance, ChanceKind, Choice, Feel, Power, PowerKey, Practice, Stage } from './types';
+import { Chance, ChanceKind, Choice, Feel, Power, PowerKey, Practice, SlotPart, SlotResult, Stage } from './types';
 
 /** 偶然をキャリアに変える5つの力（計画的偶発性理論） */
 export const POWERS: Power[] = [
@@ -159,6 +159,28 @@ export const FEEL_LABEL: Record<Feel, string> = {
   good: 'うまくいった',
   soso: 'まあまあ',
   hard: 'むずかしかった',
+};
+
+/** あき枠の時間帯 */
+export const SLOT_PARTS: { key: SlotPart; label: string }[] = [
+  { key: 'am', label: '午前' },
+  { key: 'pm', label: '午後' },
+  { key: 'eve', label: '夜' },
+];
+
+export const SLOT_PART_LABEL: Record<SlotPart, string> = { am: '午前', pm: '午後', eve: '夜' };
+
+/** あき枠のふりかえり（空けられたこと自体が成功。埋めてしまっても責めない） */
+export const SLOT_RESULTS: { key: SlotResult; label: string; done: string }[] = [
+  { key: 'chance', label: '偶然が入った', done: '偶然が入りましたね！寄り道ログにもメモしておきましょう' },
+  { key: 'rest', label: '何もなかった', done: '空けられたこと自体が大成功です。ゆっくりできましたか？' },
+  { key: 'filled', label: '予定を入れた', done: 'そんな週もあります。また来週、空けてみましょう' },
+];
+
+export const SLOT_RESULT_LABEL: Record<SlotResult, string> = {
+  chance: '偶然が入った',
+  rest: '何もなかった',
+  filled: '予定を入れた',
 };
 
 /** 自己チェックの5段階 */

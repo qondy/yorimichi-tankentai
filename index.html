@@ -94,6 +94,14 @@
           </span>
         </button>
 
+        <div id="slot-section" class="section hidden">
+          <div class="section__head">
+            <h3 class="section__title">今週のあき枠</h3>
+            <p class="section__desc">予定を入れない枠を、週に1つだけ。そこに偶然が入る余地を残しておきましょう。</p>
+          </div>
+          <div id="slot-list" class="card-list"></div>
+        </div>
+
         <div id="due-section" class="section hidden">
           <div class="section__head">
             <h3 class="section__title">見直しの日が来た保留</h3>
@@ -149,6 +157,10 @@
           <input type="search" id="input-search" placeholder="キーワードで探す" maxlength="40" aria-label="キーワードで探す" />
         </div>
         <div class="filter-chips" id="log-chips" role="radiogroup"></div>
+        <div id="reset-reminder" class="reminder hidden">
+          <p class="reminder__text">「いつかやる」の保留が<span id="reset-hold-count">0</span>件あります。たまってきたら、一度リセットして整理しましょう。</p>
+          <button type="button" id="btn-reset-holds" class="btn btn--primary btn--sm">保留をリセットする</button>
+        </div>
         <div id="log-list" class="card-list"></div>
       </section>
 
@@ -332,6 +344,23 @@
         <button type="submit" id="btn-assess-submit" class="btn btn--primary">保存する</button>
       </div>
     </form>
+  </div>
+
+  <!-- 保留リセット -->
+  <div id="reset-modal-overlay" class="dialog-overlay">
+    <div class="modal">
+      <div class="modal__head">
+        <div class="modal__title">「いつかやる」をリセット</div>
+        <button type="button" id="btn-reset-close" class="modal__close" aria-label="閉じる">&times;</button>
+      </div>
+      <p class="modal__summary">保留のままの偶然を、いったん整理しましょう。迷ったら「見送る」でだいじょうぶ。記録は寄り道ログに残り、あとからいつでも「寄ってみる」に戻せます。</p>
+      <div id="reset-list" class="reset-list"></div>
+      <p class="reset-summary" id="reset-summary" aria-live="polite"></p>
+      <div class="modal__actions">
+        <button type="button" id="btn-reset-cancel" class="btn btn--ghost">キャンセル</button>
+        <button type="button" id="btn-reset-submit" class="btn btn--primary">リセットする</button>
+      </div>
+    </div>
   </div>
 
   <!-- 確認ダイアログ（カスタムUI） -->

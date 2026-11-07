@@ -2,21 +2,23 @@ import { User } from 'firebase/auth';
 import { onAuthChange, loginWithGoogle, logout } from './auth';
 import { showToast, openOverlay, closeOverlay, textEl, button } from './ui';
 import { submitFeedback } from './feedback';
-import { todayKey, labelOf, monthKey, daysInMonth, addDays } from './dates';
+import { todayKey, labelOf, monthKey, daysInMonth, addDays, parseKey, weekStart } from './dates';
 import {
   POWERS, POWER_KEYS, KINDS, CHOICES, CHOICE_LABEL, STAGES, HOLD_DAYS, FEELS, FEEL_LABEL, SCORE_LEVELS,
   powerOf, kindLabel, stageIndex, practiceXp, chanceXp, XP_STAGE,
+  SLOT_PARTS, SLOT_PART_LABEL, SLOT_RESULTS, SLOT_RESULT_LABEL,
 } from './options';
 import {
   subscribeChances, subscribePractices, subscribeAssessments,
   createChance, updateChance, deleteChance, createPractice, updatePractice, deletePractice,
   saveAssessment, ChanceInput, PracticeInput,
+  subscribeOpenSlots, saveOpenSlot, setSlotResult, deleteOpenSlot, resetHolds, HoldResetItem,
 } from './store';
 import {
   totalXp, titleOf, powerStats, streak, countByDate, stageCounts, dueHolds, goRate,
-  latestAssessment, weakFromPass, todayPower, drillIndex,
+  latestAssessment, weakFromPass, todayPower, drillIndex, pendingPastSlot, keptSlots,
 } from './stats';
-import { Assessment, Chance, ChanceKind, Choice, Feel, PowerKey, Practice, Stage } from './types';
+import { Assessment, Chance, ChanceKind, Choice, Feel, OpenSlot, PowerKey, Practice, SlotPart, Stage } from './types';
 import { initClickTracking, track } from './analytics';
 
 initClickTracking();
@@ -43,6 +45,8 @@ const todayDateEl = $('today-date');
 const todayGo = $('today-go');
 const todayFruit = $('today-fruit');
 const todayStreak = $('today-streak');
+const slotSection = $('slot-section');
+const slotList = $('slot-list');
 const dueSection = $('due-section');
 const dueList = $('due-list');
 const assessReminder = $('assess-reminder');
@@ -59,6 +63,9 @@ const todayList = $('today-list');
 const inputSearch = $<HTMLInputElement>('input-search');
 const logChips = $('log-chips');
 const logList = $('log-list');
+const resetReminder = $('reset-reminder');
+const resetHoldCount = $('reset-hold-count');
+const btnResetHolds = $<HTMLButtonElement>('btn-reset-holds');
 
 const zukanList = $('zukan-list');
 
@@ -118,6 +125,11 @@ const assessRows = $('assess-rows');
 const inputAssessMemo = $<HTMLTextAreaElement>('input-assess-memo');
 const btnAssessSubmit = $<HTMLButtonElement>('btn-assess-submit');
 
+const resetOverlay = $('reset-modal-overlay');
+const resetListEl = $('reset-list');
+const resetSummary = $('reset-summary');
+const btnResetSubmit = $<HTMLButtonElement>('btn-reset-submit');
+
 const confirmOverlay = $('confirm-dialog-overlay');
 const confirmTitle = $('confirm-dialog-title');
 const confirmText = $('confirm-dialog-text');
@@ -135,6 +147,7 @@ const btnFeedbackSend = $<HTMLButtonElement>('btn-feedback-send');
 // ============================================================
 type Tab = 'today' | 'log' | 'zukan' | 'record';
 type LogFilter = 'all' | Choice | 'fruit';
+type ResetChoice = 'go' | 'pass' | 'keep';
 
 interface State {
   uid: string | null;
@@ -142,6 +155,8 @@ interface State {
   chances: Chance[];
   practices: Practice[];
   assessments: Assessment[];
+  slots: OpenSlot[];
+  slotsLoaded: boolean;
   loaded: boolean;
   tab: Tab;
   /** きょうのお題で、自分で選び直した力（null ならおすすめ） */
@@ -161,6 +176,11 @@ interface State {
   formDrill: string;
   formFeel: Feel;
   assessScores: Record<PowerKey, number>;
+  /** あき枠を決めるときの選択中の日・時間帯 */
+  slotDate: string | null;
+  slotPart: SlotPart;
+  /** 保留リセットで選んだ振り分け（未選択は「見送る」） */
+  resetChoices: Record<string, ResetChoice>;
   pending: Set<string>;
   confirmAction: (() => Promise<void>) | null;
 }
@@ -172,6 +192,8 @@ const state: State = {
   chances: [],
   practices: [],
   assessments: [],
+  slots: [],
+  slotsLoaded: false,
   loaded: false,
   tab: 'today',
   pickedPower: null,
@@ -190,6 +212,9 @@ const state: State = {
   formDrill: '',
   formFeel: 'good',
   assessScores: {} as Record<PowerKey, number>,
+  slotDate: null,
+  slotPart: 'pm',
+  resetChoices: {},
   pending: new Set(),
   confirmAction: null,
 };
@@ -400,6 +425,8 @@ function renderToday(): void {
   todayFruit.textContent = String(goes.filter((c) => c.stage === 'fruit').length);
   todayStreak.textContent = `${streak(state.chances, state.practices)}日`;
 
+  renderSlots();
+
   const due = dueHolds(state.chances, day);
   dueSection.classList.toggle('hidden', !due.length);
   dueList.replaceChildren(...due.map(chanceCard));
@@ -438,6 +465,235 @@ function renderToday(): void {
     : [emptyState('まだきょうの記録はありません。気になる偶然があったらメモし、お題を1つやってみましょう。')]));
 }
 
+// ============================================================
+// あき枠（週に1つ、予定を入れない枠）
+// ============================================================
+const slotLabel = (slot: OpenSlot): string => `${labelOf(slot.date)} ${SLOT_PART_LABEL[slot.part]}`;
+
+function slotResultButtons(slot: OpenSlot): HTMLElement {
+  const uid = state.uid;
+  const row = document.createElement('div');
+  row.className = 'item-card__actions';
+  if (!uid) return row;
+  SLOT_RESULTS.forEach((r) => {
+    row.appendChild(actionBtn(`slotres:${slot.week}`, r.label, 'btn btn--ghost btn--sm', async () => {
+      await setSlotResult(uid, slot.week, r.key);
+      track('slot_result', { result: r.key });
+    }, r.done));
+  });
+  return row;
+}
+
+function slotPickCard(week: string, day: string): HTMLElement {
+  const uid = state.uid;
+  const card = document.createElement('article');
+  card.className = 'item-card slot-card';
+  const days: string[] = [];
+  for (let k = day; weekStart(k) === week; k = addDays(k, 1)) days.push(k);
+  if (state.slotDate && !days.includes(state.slotDate)) state.slotDate = null;
+
+  const dayChips = document.createElement('div');
+  dayChips.className = 'filter-chips filter-chips--tight';
+  dayChips.setAttribute('role', 'radiogroup');
+  dayChips.append(...days.map((k) =>
+    radioChip(k === day ? `${labelOf(k)}・きょう` : labelOf(k), state.slotDate === k, () => {
+      state.slotDate = k;
+      renderSlots();
+    })));
+
+  const partChips = document.createElement('div');
+  partChips.className = 'filter-chips filter-chips--tight';
+  partChips.setAttribute('role', 'radiogroup');
+  partChips.append(...SLOT_PARTS.map((p) =>
+    radioChip(p.label, state.slotPart === p.key, () => {
+      state.slotPart = p.key;
+      renderSlots();
+    })));
+
+  const save = button('この枠を空けておく', 'btn btn--primary', () => {
+    const date = state.slotDate;
+    if (!uid) return;
+    if (!date) {
+      showToast('空けておく日を選んでください');
+      return;
+    }
+    const part = state.slotPart;
+    void withLock('slot:save', async () => {
+      await saveOpenSlot(uid, { week, date, part, result: '' });
+      state.slotDate = null;
+      track('slot_set');
+      showToast(`${labelOf(date)}の${SLOT_PART_LABEL[part]}を空けておきます`);
+    });
+  });
+  save.disabled = state.pending.has('slot:save');
+
+  card.append(
+    pill('まだ決めていません', 'item-card__badge'),
+    textEl('p', 'chance__title', '今週、予定を入れない枠を1つ決めましょう'),
+    textEl('p', 'item-card__meta', 'いつ空けますか？'),
+    dayChips,
+    textEl('p', 'item-card__meta', '時間帯は？'),
+    partChips,
+    save,
+  );
+  return card;
+}
+
+function slotCurrentCard(slot: OpenSlot, day: string): HTMLElement {
+  const uid = state.uid;
+  const card = document.createElement('article');
+  card.className = 'item-card slot-card';
+  const label = slotLabel(slot);
+
+  if (slot.result) {
+    card.append(
+      pill(SLOT_RESULT_LABEL[slot.result], 'item-card__badge'),
+      textEl('p', 'chance__title', label),
+      textEl('p', 'item-card__meta', '今週のあき枠は、ふりかえり済みです。'),
+    );
+    return card;
+  }
+
+  if (slot.date <= day) {
+    const isToday = slot.date === day;
+    card.append(
+      pill(isToday ? 'きょうは空き枠' : 'ふりかえり', 'item-card__badge'),
+      textEl('p', 'chance__title', label),
+      textEl('p', 'item-card__meta', isToday
+        ? '予定は入れずに、ふらっと寄り道してみましょう。何かあったら、あとでメモに残せます。'
+        : 'この枠はどうでしたか？'),
+    );
+    const actions = slotResultButtons(slot);
+    if (isToday) actions.prepend(button('偶然をメモする', 'btn btn--primary btn--sm', () => openChanceModal({})));
+    card.appendChild(actions);
+    return card;
+  }
+
+  const left = Math.round((parseKey(slot.date).getTime() - parseKey(day).getTime()) / 86400000);
+  card.append(
+    pill(`あと${left}日`, 'item-card__badge'),
+    textEl('p', 'chance__title', label),
+    textEl('p', 'item-card__meta', 'この枠には予定を入れないでおきましょう。誘いや頼まれごとが来たら、ここで受けてみる手もあります。'),
+  );
+  if (uid) {
+    const actions = document.createElement('div');
+    actions.className = 'item-card__actions';
+    actions.appendChild(button('枠を変える', 'text-btn', () => {
+      void withLock('slot:change', () => deleteOpenSlot(uid, slot.week));
+    }));
+    card.appendChild(actions);
+  }
+  return card;
+}
+
+function renderSlots(): void {
+  slotSection.classList.toggle('hidden', !state.slotsLoaded);
+  if (!state.slotsLoaded) return;
+  const day = todayKey();
+  const week = weekStart(day);
+  const cards: HTMLElement[] = [];
+
+  const past = pendingPastSlot(state.slots, day, week);
+  if (past) {
+    const card = document.createElement('article');
+    card.className = 'item-card slot-card';
+    card.append(
+      pill('ふりかえり', 'item-card__badge'),
+      textEl('p', 'chance__title', `前のあき枠（${slotLabel(past)}）はどうでしたか？`),
+      slotResultButtons(past),
+    );
+    cards.push(card);
+  }
+
+  const mine = state.slots.find((s) => s.week === week);
+  cards.push(mine ? slotCurrentCard(mine, day) : slotPickCard(week, day));
+
+  const kept = keptSlots(state.slots);
+  if (kept) cards.push(textEl('p', 'slot-note', `これまでに空けられた週：${kept}回`));
+  slotList.replaceChildren(...cards);
+}
+
+// ============================================================
+// 「いつかやる」（保留）のリセット
+// ============================================================
+const RESET_OPTIONS: { key: ResetChoice; label: string }[] = [
+  { key: 'go', label: '寄ってみる' },
+  { key: 'pass', label: '見送る' },
+  { key: 'keep', label: '保留のまま' },
+];
+
+const holdsOldestFirst = (): Chance[] =>
+  state.chances
+    .filter((c) => c.choice === 'hold')
+    .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
+
+function renderResetModal(): void {
+  const holds = holdsOldestFirst();
+  resetListEl.replaceChildren(...holds.map((c) => {
+    const row = document.createElement('div');
+    row.className = 'reset-row';
+    const chips = document.createElement('div');
+    chips.className = 'filter-chips filter-chips--tight';
+    chips.setAttribute('role', 'radiogroup');
+    const cur = state.resetChoices[c.id] ?? 'pass';
+    chips.append(...RESET_OPTIONS.map((o) =>
+      radioChip(o.label, cur === o.key, () => {
+        state.resetChoices[c.id] = o.key;
+        renderResetModal();
+      })));
+    row.append(
+      textEl('p', 'reset-row__title', c.title),
+      textEl('p', 'item-card__meta', labelOf(c.date)),
+      chips,
+    );
+    return row;
+  }));
+  const counts: Record<ResetChoice, number> = { go: 0, pass: 0, keep: 0 };
+  holds.forEach((c) => { counts[state.resetChoices[c.id] ?? 'pass'] += 1; });
+  resetSummary.textContent = `寄ってみる ${counts.go}件・見送る ${counts.pass}件・保留のまま ${counts.keep}件`;
+  btnResetSubmit.disabled = state.pending.has('reset') || counts.go + counts.pass === 0;
+}
+
+function openResetModal(): void {
+  state.resetChoices = {};
+  renderResetModal();
+  openOverlay(resetOverlay);
+}
+
+const closeResetModal = (): void => closeOverlay(resetOverlay);
+
+btnResetHolds.addEventListener('click', openResetModal);
+$('btn-reset-close').addEventListener('click', closeResetModal);
+$('btn-reset-cancel').addEventListener('click', closeResetModal);
+
+btnResetSubmit.addEventListener('click', () => {
+  const uid = state.uid;
+  if (!uid) return;
+  const items: HoldResetItem[] = [];
+  holdsOldestFirst().forEach((c) => {
+    const choice = state.resetChoices[c.id] ?? 'pass';
+    if (choice !== 'keep') items.push({ id: c.id, choice });
+  });
+  if (!items.length) {
+    showToast('整理する保留がありません');
+    return;
+  }
+  const go = items.filter((i) => i.choice === 'go').length;
+  const pass = items.length - go;
+  askConfirm(
+    '保留をリセットしますか？',
+    `${pass}件を見送り、${go}件を寄ってみることにします。見送った偶然も寄り道ログに残り、あとから「寄ってみる」に戻せます。`,
+    'リセットする',
+    async () => {
+      const ok = await withLock('reset', () => resetHolds(uid, items), 'リセットに失敗しました');
+      if (!ok) return;
+      closeResetModal();
+      track('hold_reset', { go, pass });
+      showToast('保留をリセットしました。身軽になりましたね');
+    },
+  );
+});
+
 btnDrillDone.addEventListener('click', () => {
   const { power, drill } = currentDrill();
   openPracticeModal({ power, drill });
@@ -461,6 +717,9 @@ const LOG_FILTERS: { key: LogFilter; label: string; match: (c: Chance) => boolea
 
 function renderLog(): void {
   const all = state.chances;
+  const holdCount = all.filter((c) => c.choice === 'hold').length;
+  resetReminder.classList.toggle('hidden', holdCount === 0);
+  resetHoldCount.textContent = String(holdCount);
   logChips.replaceChildren(...LOG_FILTERS.map((f) =>
     radioChip(`${f.label} ${all.filter(f.match).length}`, state.logFilter === f.key, () => {
       state.logFilter = f.key;
@@ -733,6 +992,7 @@ function renderAll(): void {
   btnChanceSubmit.disabled = state.pending.has('chance');
   btnPracticeSubmit.disabled = state.pending.has('practice');
   btnAssessSubmit.disabled = state.pending.has('assess');
+  if (resetOverlay.classList.contains('is-open')) renderResetModal();
 }
 
 // ============================================================
@@ -1103,7 +1363,7 @@ btnFeedbackSend.addEventListener('click', async () => {
 });
 
 // オーバーレイの背景クリックで閉じる（確認ダイアログは誤操作防止のため除外）
-[chanceOverlay, practiceOverlay, assessOverlay, feedbackOverlay].forEach((overlay) => {
+[chanceOverlay, practiceOverlay, assessOverlay, feedbackOverlay, resetOverlay].forEach((overlay) => {
   overlay.addEventListener('click', (e) => {
     if (e.target !== overlay) return;
     if (overlay === chanceOverlay) closeChanceModal();
@@ -1118,6 +1378,7 @@ document.addEventListener('keydown', (e) => {
   closePracticeModal();
   closeOverlay(assessOverlay);
   closeOverlay(feedbackOverlay);
+  closeResetModal();
   closeOverlay(confirmOverlay);
   state.confirmAction = null;
 });
@@ -1176,6 +1437,8 @@ onAuthChange((user: User | null) => {
     state.chances = [];
     state.practices = [];
     state.assessments = [];
+    state.slots = [];
+    state.slotsLoaded = false;
     state.loaded = false;
     loginScreen.classList.remove('hidden');
     appEl.classList.add('hidden');
@@ -1210,6 +1473,12 @@ onAuthChange((user: User | null) => {
   state.unsubscribers.push(subscribePractices(user.uid, (items) => {
     state.practices = items;
     if (practicesFirst) { practicesFirst = false; markLoaded(); }
+    renderAll();
+  }, onError));
+  let slotsFirst = true;
+  state.unsubscribers.push(subscribeOpenSlots(user.uid, (items) => {
+    state.slots = items;
+    if (slotsFirst) { slotsFirst = false; state.slotsLoaded = true; }
     renderAll();
   }, onError));
   state.unsubscribers.push(subscribeAssessments(user.uid, (items) => {

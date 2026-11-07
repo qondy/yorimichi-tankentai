@@ -656,6 +656,57 @@
   }
 }
 
+// ===== あき枠（週に1つの予定を入れない枠） =====
+.slot-card {
+  border-left: 4px solid $color-primary;
+
+  .filter-chips {
+    margin-bottom: $spacing-xs;
+  }
+}
+
+.slot-note {
+  font-size: $font-size-sm;
+  color: $color-text-muted;
+  text-align: center;
+}
+
+// ===== 保留（いつかやる）のリセット =====
+.reset-list {
+  display: grid;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.reset-row {
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid $color-border;
+
+  &:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  &__title {
+    margin-bottom: 2px;
+    font-size: $font-size-base;
+    font-weight: 700;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .filter-chips {
+    margin-top: $spacing-sm;
+  }
+}
+
+.reset-summary {
+  margin-bottom: $spacing-sm;
+  font-size: $font-size-sm;
+  font-weight: 700;
+  color: $color-primary-ink;
+}
+
 .drill-card {
   margin-bottom: $spacing-lg;
   padding: $spacing-lg;

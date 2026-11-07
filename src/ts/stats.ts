@@ -1,4 +1,4 @@
-import { Assessment, Chance, PowerKey, Practice, Stage } from './types';
+import { Assessment, Chance, OpenSlot, PowerKey, Practice, Stage } from './types';
 import { chanceXp, practiceXp, POWERS, TITLES, XP_PER_LEVEL } from './options';
 import { addDays, hashString, todayKey } from './dates';
 
@@ -79,6 +79,18 @@ export function stageCounts(chances: Chance[]): Record<Stage, number> {
 /** 見直し日が来た保留 */
 export function dueHolds(chances: Chance[], day: string): Chance[] {
   return chances.filter((c) => c.choice === 'hold' && (!c.holdUntil || c.holdUntil <= day));
+}
+
+/** ふりかえり待ちのあき枠（今週より前で、日付が過ぎているもののうち最新の1件） */
+export function pendingPastSlot(slots: OpenSlot[], day: string, thisWeek: string): OpenSlot | null {
+  const past = slots.filter((s) => s.week < thisWeek && s.date <= day && !s.result);
+  past.sort((a, b) => b.week.localeCompare(a.week));
+  return past[0] ?? null;
+}
+
+/** 空けられた週の数（予定を入れなかった週） */
+export function keptSlots(slots: OpenSlot[]): number {
+  return slots.filter((s) => s.result === 'chance' || s.result === 'rest').length;
 }
 
 /** 寄ってみた割合（保留中は数えない） */

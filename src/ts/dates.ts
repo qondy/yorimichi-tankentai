@@ -20,6 +20,11 @@ export function addDays(key: string, delta: number): string {
   return dateKey(d);
 }
 
+/** その日を含む週の月曜日（週は月曜はじまり） */
+export function weekStart(key: string): string {
+  return addDays(key, -((parseKey(key).getDay() + 6) % 7));
+}
+
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 
 export function labelOf(key: string): string {

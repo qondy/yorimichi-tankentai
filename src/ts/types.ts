@@ -65,6 +65,23 @@ export interface Practice {
   createdAt: number;
 }
 
+/** あき枠の時間帯 */
+export type SlotPart = 'am' | 'pm' | 'eve';
+
+/** あき枠のふりかえり。chance=偶然が入った / rest=何も入らずゆっくり過ごした / filled=予定を入れてしまった */
+export type SlotResult = 'chance' | 'rest' | 'filled';
+
+/** users/{uid}/openSlots/{週の月曜日 YYYY-MM-DD} 週に1つだけ、予定を入れない枠 */
+export interface OpenSlot {
+  /** その週の月曜日（ドキュメントID） */
+  week: string;
+  /** 空けておく日 YYYY-MM-DD */
+  date: string;
+  part: SlotPart;
+  /** まだふりかえっていなければ空 */
+  result: SlotResult | '';
+}
+
 /** users/{uid}/assessments/{YYYY-MM} 月1回の自己チェック（各1〜5） */
 export interface Assessment {
   month: string;

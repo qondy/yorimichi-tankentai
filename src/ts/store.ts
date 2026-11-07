@@ -1,14 +1,16 @@
 import {
-  collection, doc, onSnapshot, setDoc, addDoc, deleteDoc, serverTimestamp,
+  collection, doc, onSnapshot, setDoc, addDoc, deleteDoc, serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Assessment, Chance, ChanceKind, Choice, Feel, PowerKey, Practice, Stage } from './types';
+import { Assessment, Chance, ChanceKind, Choice, Feel, OpenSlot, PowerKey, Practice, SlotPart, SlotResult, Stage } from './types';
 import { POWER_KEYS } from './options';
 
 const FEELS: Feel[] = ['good', 'soso', 'hard'];
 const KINDS: ChanceKind[] = ['meet', 'invite', 'request', 'info', 'idea', 'other'];
 const CHOICES: Choice[] = ['go', 'hold', 'pass'];
 const STAGES: Stage[] = ['seed', 'sprout', 'flower', 'fruit'];
+const SLOT_PARTS: SlotPart[] = ['am', 'pm', 'eve'];
+const SLOT_RESULTS: SlotResult[] = ['chance', 'rest', 'filled'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_RE = /^\d{4}-\d{2}$/;
 
@@ -25,6 +27,8 @@ const practicesCol = (uid: string) => collection(db, 'users', uid, 'practices');
 const practiceDoc = (uid: string, id: string) => doc(db, 'users', uid, 'practices', id);
 const assessmentsCol = (uid: string) => collection(db, 'users', uid, 'assessments');
 const assessmentDoc = (uid: string, month: string) => doc(db, 'users', uid, 'assessments', month);
+const slotsCol = (uid: string) => collection(db, 'users', uid, 'openSlots');
+const slotDoc = (uid: string, week: string) => doc(db, 'users', uid, 'openSlots', week);
 
 export function subscribeChances(
   uid: string,
@@ -105,6 +109,69 @@ export function subscribeAssessments(
     list.sort((a, b) => a.month.localeCompare(b.month));
     onData(list);
   }, onError);
+}
+
+export function subscribeOpenSlots(
+  uid: string,
+  onData: (items: OpenSlot[]) => void,
+  onError: (err: Error) => void,
+): () => void {
+  return onSnapshot(slotsCol(uid), (snap) => {
+    const list: OpenSlot[] = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      if (!DATE_RE.test(d.id) || typeof data.date !== 'string' || !DATE_RE.test(data.date)) return;
+      list.push({
+        week: d.id,
+        date: data.date,
+        part: pick(data.part, SLOT_PARTS, 'pm'),
+        result: SLOT_RESULTS.includes(data.result) ? data.result : '',
+      });
+    });
+    list.sort((a, b) => b.week.localeCompare(a.week));
+    onData(list);
+  }, onError);
+}
+
+export function saveOpenSlot(uid: string, slot: OpenSlot): Promise<void> {
+  return setDoc(slotDoc(uid, slot.week), {
+    date: slot.date,
+    part: slot.part,
+    result: '',
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export function setSlotResult(uid: string, week: string, result: SlotResult): Promise<void> {
+  return setDoc(slotDoc(uid, week), { result, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export function deleteOpenSlot(uid: string, week: string): Promise<void> {
+  return deleteDoc(slotDoc(uid, week));
+}
+
+export interface HoldResetItem {
+  id: string;
+  /** go=寄ってみる / pass=見送る */
+  choice: 'go' | 'pass';
+}
+
+/** 保留をまとめて整理する（記録は消さず、寄ってみる／見送るに振り分ける） */
+export async function resetHolds(uid: string, items: HoldResetItem[]): Promise<void> {
+  const BATCH_MAX = 400;
+  for (let i = 0; i < items.length; i += BATCH_MAX) {
+    const batch = writeBatch(db);
+    items.slice(i, i + BATCH_MAX).forEach(({ id, choice }) => {
+      batch.set(
+        chanceDoc(uid, id),
+        choice === 'go'
+          ? { choice: 'go', stage: 'seed', holdUntil: '', updatedAt: serverTimestamp() }
+          : { choice: 'pass', holdUntil: '', updatedAt: serverTimestamp() },
+        { merge: true },
+      );
+    });
+    await batch.commit();
+  }
 }
 
 export type ChanceInput = Omit<Chance, 'id' | 'createdAt'>;
