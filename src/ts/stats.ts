@@ -1,6 +1,6 @@
 import { Assessment, Chance, OpenSlot, PowerKey, Practice, Stage } from './types';
 import { chanceXp, practiceXp, POWERS, TITLES, XP_PER_LEVEL } from './options';
-import { addDays, hashString, todayKey } from './dates';
+import { addDays, hashString, parseKey, todayKey } from './dates';
 
 export function totalXp(chances: Chance[], practices: Practice[]): number {
   return chances.reduce((s, c) => s + chanceXp(c), 0) + practices.reduce((s, p) => s + practiceXp(p), 0);
@@ -131,4 +131,62 @@ export function todayPower(chances: Chance[], practices: Practice[], assessments
 /** 力のお題を日替わりで選ぶ（offset で「別のお題」） */
 export function drillIndex(power: PowerKey, day: string, offset: number, length: number): number {
   return (hashString(`${day}:${power}`) + offset) % length;
+}
+
+/** 「寄り道のあゆみ」でくらべる期間の長さ（日） */
+export const COMPARE_DAYS = 30;
+
+export function daysBetween(from: string, to: string): number {
+  return Math.round((parseKey(to).getTime() - parseKey(from).getTime()) / 86400000);
+}
+
+export interface PeriodStat {
+  from: string;
+  to: string;
+  /** メモした偶然 */
+  memos: number;
+  /** 寄ってみた偶然 */
+  goes: number;
+  /** 寄ってみた割合（保留中は数えない） */
+  rate: number | null;
+  /** 芽より先に育った寄り道 */
+  grown: number;
+  /** 寄り道でいちばん多く使った力 */
+  topPower: PowerKey | null;
+}
+
+export function periodStat(chances: Chance[], from: string, to: string): PeriodStat {
+  const list = chances.filter((c) => c.date >= from && c.date <= to);
+  const goes = list.filter((c) => c.choice === 'go');
+  const count = new Map<PowerKey, number>();
+  goes.forEach((c) => c.powers.forEach((k) => count.set(k, (count.get(k) ?? 0) + 1)));
+  let topPower: PowerKey | null = null;
+  let max = 0;
+  POWERS.forEach((p) => {
+    const v = count.get(p.key) ?? 0;
+    if (v > max) { max = v; topPower = p.key; }
+  });
+  return {
+    from,
+    to,
+    memos: list.length,
+    goes: goes.length,
+    rate: goRate(list),
+    grown: goes.filter((c) => c.stage !== 'seed').length,
+    topPower,
+  };
+}
+
+/**
+ * はじめの頃（最初のメモから30日）と最近（今日までの30日）をくらべる。
+ * 最初のメモからの日数が短く、2つの期間が重なるうちは recent を null にする。
+ */
+export function journeyCompare(chances: Chance[], day: string): { start: string; days: number; first: PeriodStat; recent: PeriodStat | null } | null {
+  if (!chances.length) return null;
+  const start = chances.reduce((min, c) => (c.date < min ? c.date : min), chances[0].date);
+  const days = daysBetween(start, day);
+  const first = periodStat(chances, start, addDays(start, COMPARE_DAYS - 1));
+  const recentFrom = addDays(day, -(COMPARE_DAYS - 1));
+  const recent = recentFrom > first.to ? periodStat(chances, recentFrom, day) : null;
+  return { start, days, first, recent };
 }

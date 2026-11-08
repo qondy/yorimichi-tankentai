@@ -17,6 +17,7 @@ import {
 import {
   totalXp, titleOf, powerStats, streak, countByDate, stageCounts, dueHolds, goRate,
   latestAssessment, weakFromPass, todayPower, drillIndex, pendingPastSlot, keptSlots,
+  journeyCompare, COMPARE_DAYS, PeriodStat,
 } from './stats';
 import { Assessment, Chance, ChanceKind, Choice, Feel, OpenSlot, PowerKey, Practice, SlotPart, Stage } from './types';
 import { initClickTracking, track } from './analytics';
@@ -77,6 +78,9 @@ const statChances = $('stat-chances');
 const statRate = $('stat-rate');
 const statPractice = $('stat-practice');
 const stageFunnel = $('stage-funnel');
+const journeyCompareEl = $('journey-compare');
+const journeyOrder = $('journey-order');
+const journeyList = $('journey-list');
 const radarEl = $('radar');
 const radarLegend = $('radar-legend');
 const radarMemo = $('radar-memo');
@@ -164,6 +168,10 @@ interface State {
   drillOffset: number;
   logFilter: LogFilter;
   search: string;
+  /** 寄り道のあゆみの並び順（asc=はじめから） */
+  journeyOrder: 'asc' | 'desc';
+  /** 寄り道のあゆみで表示している件数 */
+  journeyLimit: number;
   calYear: number;
   calMonth0: number;
   editingChanceId: string | null;
@@ -185,6 +193,9 @@ interface State {
   confirmAction: (() => Promise<void>) | null;
 }
 
+/** 寄り道のあゆみで一度に表示する件数 */
+const JOURNEY_PAGE = 20;
+
 const now = new Date();
 const state: State = {
   uid: null,
@@ -200,6 +211,8 @@ const state: State = {
   drillOffset: 0,
   logFilter: 'all',
   search: '',
+  journeyOrder: 'asc',
+  journeyLimit: JOURNEY_PAGE,
   calYear: now.getFullYear(),
   calMonth0: now.getMonth(),
   editingChanceId: null,
@@ -877,6 +890,130 @@ function renderStageFunnel(): void {
   }));
 }
 
+// ============================================================
+// 寄り道のあゆみ（はじめの頃とくらべる＋これまでの寄り道一覧）
+// ============================================================
+function compareValue(text: string, better: boolean): HTMLElement {
+  return textEl('span', `journey-compare__value${better ? ' is-up' : ''}`, text);
+}
+
+function renderJourneyCompare(): void {
+  const day = todayKey();
+  const cmp = journeyCompare(state.chances, day);
+  if (!cmp) {
+    journeyCompareEl.replaceChildren(emptyState('まだ記録がありません。偶然をメモしていくと、はじめの頃と今をくらべられるようになります。'));
+    return;
+  }
+  const lead = textEl('p', 'journey-compare__lead', `探検をはじめて${cmp.days + 1}日目（${labelOf(cmp.start)}から）`);
+  if (!cmp.recent) {
+    const rest = COMPARE_DAYS * 2 - 1 - cmp.days;
+    journeyCompareEl.replaceChildren(
+      lead,
+      textEl('p', 'journey-compare__hint', `あと${rest}日で、はじめの${COMPARE_DAYS}日と最近の${COMPARE_DAYS}日をくらべられるようになります。いまは、はじめの${COMPARE_DAYS}日の記録をためている途中です。`),
+    );
+    return;
+  }
+  const { first, recent } = cmp;
+  const pct = (r: number | null): string => (r === null ? '-' : `${Math.round(r * 100)}%`);
+  const rows: { label: string; a: string; b: string; up: boolean }[] = [
+    { label: 'メモした偶然', a: `${first.memos}件`, b: `${recent.memos}件`, up: recent.memos > first.memos },
+    { label: '寄り道した数', a: `${first.goes}回`, b: `${recent.goes}回`, up: recent.goes > first.goes },
+    { label: '寄り道した割合', a: pct(first.rate), b: pct(recent.rate), up: (recent.rate ?? 0) > (first.rate ?? 0) },
+    { label: '芽より先に育った', a: `${first.grown}件`, b: `${recent.grown}件`, up: recent.grown > first.grown },
+  ];
+  const grid = document.createElement('div');
+  grid.className = 'journey-compare__grid';
+  grid.append(
+    textEl('span', 'journey-compare__corner', ''),
+    textEl('span', 'journey-compare__col', `はじめの${COMPARE_DAYS}日`),
+    textEl('span', 'journey-compare__col journey-compare__col--now', `最近の${COMPARE_DAYS}日`),
+  );
+  rows.forEach((r) => grid.append(
+    textEl('span', 'journey-compare__label', r.label),
+    compareValue(r.a, false),
+    compareValue(r.b, r.up),
+  ));
+  const top = (p: PeriodStat): string => (p.topPower ? powerOf(p.topPower).name : '-');
+  grid.append(
+    textEl('span', 'journey-compare__label', 'よく使った力'),
+    compareValue(top(first), false),
+    compareValue(top(recent), false),
+  );
+  const upCount = rows.filter((r) => r.up).length;
+  const summary = upCount >= 3
+    ? 'はじめの頃より、ずいぶん寄り道上手になっています！'
+    : upCount >= 1 ? 'はじめの頃より伸びているところがあります。この調子で。'
+      : 'ひと休みの時期かもしれません。小さな「おや？」からまた寄り道してみましょう。';
+  journeyCompareEl.replaceChildren(lead, grid, textEl('p', 'journey-compare__summary', summary));
+}
+
+function journeyItem(c: Chance, no: number): HTMLElement {
+  const item = document.createElement('button');
+  item.type = 'button';
+  item.className = `journey__item${c.stage === 'fruit' ? ' is-fruit' : ''}`;
+  item.dataset.track = 'journey_item';
+  const head = document.createElement('span');
+  head.className = 'journey__head';
+  head.append(
+    textEl('span', 'journey__no', `${no}回目`),
+    textEl('span', 'journey__date', labelOf(c.date)),
+    pill(STAGES[stageIndex(c.stage)].label, `journey__stage journey__stage--${c.stage}`),
+  );
+  item.append(head, textEl('span', 'journey__title', c.title));
+  if (c.powers.length || c.story.trim()) {
+    const foot = document.createElement('span');
+    foot.className = 'journey__foot';
+    c.powers.forEach((k) => foot.appendChild(pill(powerOf(k).name, `power-pill power-pill--${k}`)));
+    if (c.story.trim()) foot.appendChild(textEl('span', 'journey__story', `その後：${c.story}`));
+    item.appendChild(foot);
+  }
+  item.addEventListener('click', () => openChanceModal({ id: c.id }));
+  return item;
+}
+
+function renderJourney(): void {
+  renderJourneyCompare();
+  journeyOrder.replaceChildren(
+    radioChip('はじめから', state.journeyOrder === 'asc', () => { state.journeyOrder = 'asc'; state.journeyLimit = JOURNEY_PAGE; renderJourney(); }),
+    radioChip('最近から', state.journeyOrder === 'desc', () => { state.journeyOrder = 'desc'; state.journeyLimit = JOURNEY_PAGE; renderJourney(); }),
+  );
+  if (!state.loaded) {
+    journeyList.replaceChildren(emptyState('読み込み中…'));
+    return;
+  }
+  // 古い順に番号をつけてから、表示順に並べ替える
+  const goes = state.chances
+    .filter((c) => c.choice === 'go')
+    .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt)
+    .map((c, i) => ({ c, no: i + 1 }));
+  journeyOrder.classList.toggle('hidden', goes.length < 2);
+  if (!goes.length) {
+    journeyList.replaceChildren(emptyState('まだ寄り道はありません。偶然をメモするときに「寄ってみる」を選ぶと、ここに順番に並びます。'));
+    return;
+  }
+  const ordered = state.journeyOrder === 'asc' ? goes : [...goes].reverse();
+  const shown = ordered.slice(0, state.journeyLimit);
+  const nodes: HTMLElement[] = [];
+  let month = '';
+  shown.forEach(({ c, no }) => {
+    const m = c.date.slice(0, 7);
+    if (m !== month) {
+      month = m;
+      const total = goes.filter((g) => g.c.date.startsWith(m)).length;
+      nodes.push(textEl('p', 'journey__month', `${Number(m.slice(0, 4))}年${Number(m.slice(5, 7))}月（${total}回）`));
+    }
+    nodes.push(journeyItem(c, no));
+  });
+  const rest = ordered.length - shown.length;
+  if (rest > 0) {
+    nodes.push(button(`もっと見る（あと${rest}回）`, 'btn btn--ghost journey__more', () => {
+      state.journeyLimit += JOURNEY_PAGE;
+      renderJourney();
+    }));
+  }
+  journeyList.replaceChildren(...nodes);
+}
+
 function renderCalendar(): void {
   const y = state.calYear;
   const m0 = state.calMonth0;
@@ -916,6 +1053,7 @@ function renderRecord(): void {
   statPractice.textContent = String(state.practices.length);
 
   renderStageFunnel();
+  renderJourney();
   renderRadar();
 
   const stats = powerStats(state.chances, state.practices);
