@@ -54,6 +54,9 @@ export function subscribeChances(
           : [],
         note: str(data.note),
         story: str(data.story),
+        nofit: data.nofit === true,
+        nofitReason: str(data.nofitReason),
+        nofitDate: DATE_RE.test(str(data.nofitDate)) ? str(data.nofitDate) : '',
         createdAt: millis(data.createdAt),
       });
     });
@@ -174,7 +177,9 @@ export async function resetHolds(uid: string, items: HoldResetItem[]): Promise<v
   }
 }
 
-export type ChanceInput = Omit<Chance, 'id' | 'createdAt'>;
+/** 偶然のメモ画面で編集する項目（「合わなかった」は専用の操作で変えるので含めない） */
+export type ChanceInput = Omit<Chance, 'id' | 'createdAt' | 'nofit' | 'nofitReason' | 'nofitDate'>;
+export type NofitInput = Pick<Chance, 'nofit' | 'nofitReason' | 'nofitDate'>;
 export type PracticeInput = Omit<Practice, 'id' | 'createdAt'>;
 
 export async function createChance(uid: string, input: ChanceInput): Promise<void> {
@@ -183,6 +188,16 @@ export async function createChance(uid: string, input: ChanceInput): Promise<voi
 
 export function updateChance(uid: string, id: string, input: Partial<ChanceInput>): Promise<void> {
   return setDoc(chanceDoc(uid, id), { ...input, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+/** 寄ってみた偶然を「合わなかった（もうやらない）」にする／戻す */
+export function setNofit(uid: string, id: string, input: NofitInput): Promise<void> {
+  return setDoc(chanceDoc(uid, id), { ...input, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+/** アプリを使う前に試して合わなかったことを、直接「もうやらない」として記録する */
+export async function createNofit(uid: string, input: ChanceInput & NofitInput): Promise<void> {
+  await addDoc(chancesCol(uid), { ...input, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
 }
 
 export function deleteChance(uid: string, id: string): Promise<void> {

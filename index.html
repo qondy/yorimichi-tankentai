@@ -159,6 +159,7 @@
           <input type="search" id="input-search" placeholder="キーワードで探す" maxlength="40" aria-label="キーワードで探す" />
         </div>
         <div class="filter-chips" id="log-chips" role="radiogroup"></div>
+        <button type="button" id="btn-nofit-add" class="add-inline hidden">＋ 前に試して合わなかったことを書く</button>
         <div id="reset-reminder" class="reminder hidden">
           <p class="reminder__text">「いつかやる」の保留が<span id="reset-hold-count">0</span>件あります。たまってきたら、一度リセットして整理しましょう。</p>
           <button type="button" id="btn-reset-holds" class="btn btn--primary btn--sm">保留をリセットする</button>
@@ -373,6 +374,36 @@
         <button type="button" id="btn-reset-submit" class="btn btn--primary">リセットする</button>
       </div>
     </div>
+  </div>
+
+  <!-- 合わなかった（もうやらない） -->
+  <div id="nofit-modal-overlay" class="dialog-overlay">
+    <form id="nofit-form" class="modal">
+      <div class="modal__head">
+        <div class="modal__title" id="nofit-modal-title">合わなかったことを記録</div>
+        <button type="button" id="btn-nofit-close" class="modal__close" aria-label="閉じる">&times;</button>
+      </div>
+      <p class="modal__summary" id="nofit-target"></p>
+      <div id="nofit-new-fields">
+        <div class="field">
+          <label class="field__label" for="input-nofit-title">何をやってみた？</label>
+          <textarea id="input-nofit-title" maxlength="200" placeholder="例：早朝のランニング会に参加してみた"></textarea>
+        </div>
+        <div class="field">
+          <label class="field__label" for="input-nofit-date">やってみた日</label>
+          <input type="date" id="input-nofit-date" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="input-nofit-reason">どこが合わなかった？<span class="field__hint">任意</span></label>
+        <textarea id="input-nofit-reason" maxlength="300" placeholder="例：朝が早すぎて、そのあと一日中眠かった。夜の集まりのほうが合う"></textarea>
+      </div>
+      <p class="modal__note nofit-note">やってみて「自分には合わない」とわかったのも、寄り道の大事な収穫です。「もうやらない」に入れておくと、次に似た誘いが来たとき、メモ画面で思い出せます。</p>
+      <div class="modal__actions">
+        <button type="button" id="btn-nofit-cancel" class="btn btn--ghost">キャンセル</button>
+        <button type="submit" id="btn-nofit-submit" class="btn btn--primary">記録する</button>
+      </div>
+    </form>
   </div>
 
   <!-- 確認ダイアログ（カスタムUI） -->

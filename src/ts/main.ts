@@ -13,6 +13,7 @@ import {
   createChance, updateChance, deleteChance, createPractice, updatePractice, deletePractice,
   saveAssessment, ChanceInput, PracticeInput,
   subscribeOpenSlots, saveOpenSlot, setSlotResult, deleteOpenSlot, resetHolds, HoldResetItem,
+  setNofit, createNofit,
 } from './store';
 import {
   totalXp, titleOf, powerStats, streak, countByDate, stageCounts, dueHolds, goRate,
@@ -110,6 +111,17 @@ const noteLabel = $('note-label');
 const inputNote = $<HTMLTextAreaElement>('input-note');
 const btnChanceSubmit = $<HTMLButtonElement>('btn-chance-submit');
 
+const nofitOverlay = $('nofit-modal-overlay');
+const nofitForm = $<HTMLFormElement>('nofit-form');
+const nofitModalTitle = $('nofit-modal-title');
+const nofitTarget = $('nofit-target');
+const nofitNewFields = $('nofit-new-fields');
+const inputNofitTitle = $<HTMLTextAreaElement>('input-nofit-title');
+const inputNofitDate = $<HTMLInputElement>('input-nofit-date');
+const inputNofitReason = $<HTMLTextAreaElement>('input-nofit-reason');
+const btnNofitSubmit = $<HTMLButtonElement>('btn-nofit-submit');
+const btnNofitAdd = $<HTMLButtonElement>('btn-nofit-add');
+
 const practiceOverlay = $('practice-modal-overlay');
 const practiceForm = $<HTMLFormElement>('practice-form');
 const practiceModalTitle = $('practice-modal-title');
@@ -150,7 +162,7 @@ const btnFeedbackSend = $<HTMLButtonElement>('btn-feedback-send');
 // State
 // ============================================================
 type Tab = 'today' | 'log' | 'zukan' | 'record';
-type LogFilter = 'all' | Choice | 'fruit';
+type LogFilter = 'all' | Choice | 'fruit' | 'nofit';
 type ResetChoice = 'go' | 'pass' | 'keep';
 
 interface State {
@@ -175,6 +187,8 @@ interface State {
   calYear: number;
   calMonth0: number;
   editingChanceId: string | null;
+  /** 「合わなかった」を記録する偶然（null なら新しく書く） */
+  nofitId: string | null;
   formKind: ChanceKind;
   formChoice: Choice;
   formStage: Stage;
@@ -216,6 +230,7 @@ const state: State = {
   calYear: now.getFullYear(),
   calMonth0: now.getMonth(),
   editingChanceId: null,
+  nofitId: null,
   formKind: 'meet',
   formChoice: 'go',
   formStage: 'seed',
@@ -323,14 +338,15 @@ function stageTrack(stage: Stage): HTMLElement {
 function chanceCard(c: Chance): HTMLElement {
   const uid = state.uid;
   const card = document.createElement('article');
-  card.className = `item-card chance chance--${c.choice}${c.choice === 'go' && c.stage === 'fruit' ? ' is-fruit' : ''}`;
+  card.className = `item-card chance chance--${c.choice}${c.nofit ? ' is-nofit' : c.choice === 'go' && c.stage === 'fruit' ? ' is-fruit' : ''}`;
   const head = document.createElement('div');
   head.className = 'item-card__head';
   head.append(
     pill(kindLabel(c.kind), 'item-card__badge'),
     pill(CHOICE_LABEL[c.choice], `choice-pill choice-pill--${c.choice}`),
-    pill(`+${chanceXp(c)}XP`, 'xp-pill'),
   );
+  if (c.nofit) head.appendChild(pill('もうやらない', 'nofit-pill'));
+  head.appendChild(pill(`+${chanceXp(c)}XP`, 'xp-pill'));
   card.appendChild(head);
   card.appendChild(textEl('p', 'chance__title', c.title));
   const meta = c.choice === 'hold' && c.holdUntil ? `${labelOf(c.date)}・見直し ${labelOf(c.holdUntil)}` : labelOf(c.date);
@@ -347,10 +363,14 @@ function chanceCard(c: Chance): HTMLElement {
   }
   if (c.story.trim()) card.appendChild(lineEl('その後', c.story, 'practice__row--insight'));
   if (c.note.trim()) card.appendChild(lineEl(c.choice === 'pass' ? '見送った理由' : 'メモ', c.note, 'practice__row--muted'));
+  if (c.nofit) {
+    card.appendChild(lineEl(c.nofitDate ? `合わなかったところ（${labelOf(c.nofitDate)}）` : '合わなかったところ',
+      c.nofitReason.trim() || '（理由は書いていません）', 'practice__row--nofit'));
+  }
 
   const actions = document.createElement('div');
   actions.className = 'item-card__actions';
-  if (uid && c.choice === 'go' && c.stage !== 'fruit') {
+  if (uid && c.choice === 'go' && !c.nofit && c.stage !== 'fruit') {
     const next = STAGES[stageIndex(c.stage) + 1];
     actions.appendChild(actionBtn(`stage:${c.id}`, `${next.label}になった！`, 'btn btn--primary btn--sm', async () => {
       await updateChance(uid, c.id, { stage: next.key });
@@ -373,6 +393,14 @@ function chanceCard(c: Chance): HTMLElement {
         track('chance_pass');
       }, '見送りました。記録は残しておきます'),
     );
+  }
+  if (uid && c.choice === 'go' && !c.nofit) {
+    actions.appendChild(button('合わなかった', 'text-btn', () => openNofitModal(c.id)));
+  }
+  if (uid && c.nofit) {
+    actions.appendChild(actionBtn(`nofit:${c.id}`, 'やっぱりまたやる', 'text-btn', async () => {
+      await setNofit(uid, c.id, { nofit: false, nofitReason: '', nofitDate: '' });
+    }, '「もうやらない」から外しました'));
   }
   actions.append(
     button('編集', 'text-btn', () => openChanceModal({ id: c.id })),
@@ -726,6 +754,7 @@ const LOG_FILTERS: { key: LogFilter; label: string; match: (c: Chance) => boolea
   { key: 'fruit', label: '実った', match: (c) => c.choice === 'go' && c.stage === 'fruit' },
   { key: 'hold', label: '保留中', match: (c) => c.choice === 'hold' },
   { key: 'pass', label: '見送った', match: (c) => c.choice === 'pass' },
+  { key: 'nofit', label: 'もうやらない', match: (c) => c.nofit },
 ];
 
 function renderLog(): void {
@@ -738,6 +767,7 @@ function renderLog(): void {
       state.logFilter = f.key;
       renderLog();
     })));
+  btnNofitAdd.classList.toggle('hidden', state.logFilter !== 'nofit');
 
   if (!state.loaded) {
     logList.replaceChildren(emptyState('読み込み中…'));
@@ -747,11 +777,13 @@ function renderLog(): void {
   const q = state.search.trim().toLowerCase();
   const list = all
     .filter(filter.match)
-    .filter((c) => !q || [kindLabel(c.kind), c.title, c.note, c.story, ...c.powers.map((k) => powerOf(k).name)]
+    .filter((c) => !q || [kindLabel(c.kind), c.title, c.note, c.story, c.nofitReason, ...c.powers.map((k) => powerOf(k).name)]
       .some((t) => t.toLowerCase().includes(q)));
   logList.replaceChildren(...(list.length
     ? list.map(chanceCard)
-    : [emptyState(all.length
+    : [emptyState(state.logFilter === 'nofit' && !q
+      ? 'まだありません。寄ってみて「自分には合わなかった」と思ったら、カードの「合わなかった」から記録できます。前に試して合わなかったことも、上のボタンから書いておけます。'
+      : all.length
       ? '条件に合う偶然はありません。'
       : 'まだ偶然のメモはありません。「きょう」タブの「偶然をメモする」から、たまたまの出会いや誘いを記録しましょう。')]));
 }
@@ -957,7 +989,7 @@ function journeyItem(c: Chance, no: number): HTMLElement {
   head.append(
     textEl('span', 'journey__no', `${no}回目`),
     textEl('span', 'journey__date', labelOf(c.date)),
-    pill(STAGES[stageIndex(c.stage)].label, `journey__stage journey__stage--${c.stage}`),
+    pill(c.nofit ? 'もうやらない' : STAGES[stageIndex(c.stage)].label, c.nofit ? 'journey__stage journey__stage--nofit' : `journey__stage journey__stage--${c.stage}`),
   );
   item.append(head, textEl('span', 'journey__title', c.title));
   if (c.powers.length || c.story.trim()) {
@@ -1128,6 +1160,7 @@ function renderAll(): void {
   renderZukan();
   renderRecord();
   btnChanceSubmit.disabled = state.pending.has('chance');
+  btnNofitSubmit.disabled = state.pending.has('nofit');
   btnPracticeSubmit.disabled = state.pending.has('practice');
   btnAssessSubmit.disabled = state.pending.has('assess');
   if (resetOverlay.classList.contains('is-open')) renderResetModal();
@@ -1199,25 +1232,26 @@ function renderChanceFormChoices(): void {
   renderPastHint();
 }
 
-/** 新しく偶然をメモするとき、同じ種類で前に見送った偶然を見せる */
+/** 新しく偶然をメモするとき、同じ種類で前に合わなかった偶然・見送った偶然を見せる */
 function renderPastHint(): void {
-  const past = state.editingChanceId ? [] : state.chances
-    .filter((c) => c.kind === state.formKind && c.choice === 'pass')
-    .slice(0, 2);
-  chancePast.classList.toggle('hidden', !past.length);
-  if (!past.length) {
-    chancePast.replaceChildren();
-    return;
-  }
-  chancePast.replaceChildren(
-    textEl('p', 'past-hint__title', `前に見送った「${kindLabel(state.formKind)}」`),
-    ...past.map((c) => {
+  const same = state.editingChanceId ? [] : state.chances.filter((c) => c.kind === state.formKind);
+  const nofits = same.filter((c) => c.nofit).slice(0, 2);
+  const passes = same.filter((c) => c.choice === 'pass').slice(0, 2);
+  chancePast.classList.toggle('hidden', !nofits.length && !passes.length);
+  const group = (title: string, list: Chance[], reason: (c: Chance) => string): HTMLElement[] => (list.length ? [
+    textEl('p', 'past-hint__title', title),
+    ...list.map((c) => {
       const item = document.createElement('div');
       item.className = 'past-hint__item';
       item.appendChild(textEl('p', 'past-hint__text', `${labelOf(c.date)}：${c.title}`));
-      if (c.note.trim()) item.appendChild(textEl('p', 'past-hint__note', `理由：${c.note}`));
+      if (reason(c).trim()) item.appendChild(textEl('p', 'past-hint__note', `理由：${reason(c)}`));
       return item;
     }),
+  ] : []);
+  const kind = kindLabel(state.formKind);
+  chancePast.replaceChildren(
+    ...group(`前に合わなかった「${kind}」`, nofits, (c) => c.nofitReason),
+    ...group(`前に見送った「${kind}」`, passes, (c) => c.note),
   );
 }
 
@@ -1500,12 +1534,78 @@ btnFeedbackSend.addEventListener('click', async () => {
   }
 });
 
+// ============================================================
+// 合わなかった（もうやらない）
+// ============================================================
+function openNofitModal(id: string | null): void {
+  const c = findChance(id);
+  state.nofitId = c ? c.id : null;
+  nofitModalTitle.textContent = c ? '合わなかったことを記録' : '前に合わなかったことを書く';
+  nofitTarget.textContent = c ? `「${c.title}」（${labelOf(c.date)}）` : '';
+  nofitTarget.classList.toggle('hidden', !c);
+  nofitNewFields.classList.toggle('hidden', !!c);
+  inputNofitTitle.value = '';
+  inputNofitDate.value = todayKey();
+  inputNofitDate.max = todayKey();
+  inputNofitReason.value = c?.nofitReason ?? '';
+  openOverlay(nofitOverlay);
+  window.setTimeout(() => (c ? inputNofitReason : inputNofitTitle).focus(), 50);
+}
+
+const closeNofitModal = (): void => {
+  closeOverlay(nofitOverlay);
+  state.nofitId = null;
+};
+
+nofitForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const uid = state.uid;
+  if (!uid) return;
+  const id = state.nofitId;
+  const reason = inputNofitReason.value.trim();
+  const today = todayKey();
+  if (id) {
+    void withLock('nofit', async () => {
+      await setNofit(uid, id, { nofit: true, nofitReason: reason, nofitDate: today });
+      closeNofitModal();
+      track('chance_nofit');
+      showToast('「もうやらない」に入れました。合わないとわかったのも収穫です');
+    });
+    return;
+  }
+  const title = inputNofitTitle.value.trim();
+  if (!title) {
+    showToast('何をやってみたかを書いてください');
+    inputNofitTitle.focus();
+    return;
+  }
+  const date = inputNofitDate.value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today) {
+    showToast('やってみた日は今日までの日付にしてください');
+    return;
+  }
+  void withLock('nofit', async () => {
+    await createNofit(uid, {
+      date, kind: 'other', title, choice: 'go', holdUntil: '', stage: 'seed', powers: [], note: '', story: '',
+      nofit: true, nofitReason: reason, nofitDate: today,
+    });
+    closeNofitModal();
+    track('nofit_create');
+    showToast('「もうやらない」に書きました');
+  });
+});
+
+$('btn-nofit-close').addEventListener('click', closeNofitModal);
+$('btn-nofit-cancel').addEventListener('click', closeNofitModal);
+btnNofitAdd.addEventListener('click', () => openNofitModal(null));
+
 // オーバーレイの背景クリックで閉じる（確認ダイアログは誤操作防止のため除外）
-[chanceOverlay, practiceOverlay, assessOverlay, feedbackOverlay, resetOverlay].forEach((overlay) => {
+[chanceOverlay, practiceOverlay, assessOverlay, feedbackOverlay, resetOverlay, nofitOverlay].forEach((overlay) => {
   overlay.addEventListener('click', (e) => {
     if (e.target !== overlay) return;
     if (overlay === chanceOverlay) closeChanceModal();
     else if (overlay === practiceOverlay) closePracticeModal();
+    else if (overlay === nofitOverlay) closeNofitModal();
     else closeOverlay(overlay);
   });
 });
@@ -1517,6 +1617,7 @@ document.addEventListener('keydown', (e) => {
   closeOverlay(assessOverlay);
   closeOverlay(feedbackOverlay);
   closeResetModal();
+  closeNofitModal();
   closeOverlay(confirmOverlay);
   state.confirmAction = null;
 });

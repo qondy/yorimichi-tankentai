@@ -1473,3 +1473,40 @@
     min-height: 44px;
   }
 }
+
+// ===== 合わなかった（もうやらない） =====
+.nofit-pill {
+  display: inline-block;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: $color-pass;
+}
+
+.chance.is-nofit {
+  border-left: 4px solid $color-pass;
+}
+
+.practice__row--nofit {
+  border-left-color: $color-pass;
+}
+
+.journey__stage--nofit {
+  color: #fff;
+  background: $color-pass;
+}
+
+#btn-nofit-add {
+  margin: 0 0 $spacing-md;
+}
+
+.nofit-note {
+  margin: 0 0 $spacing-md;
+  line-height: 1.7;
+}
+
+.past-hint__item + .past-hint__title {
+  margin-top: $spacing-sm;
+}

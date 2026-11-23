@@ -49,6 +49,12 @@ export interface Chance {
   note: string;
   /** その後どうなったか */
   story: string;
+  /** やってみて自分に合わなかった（もうやらない） */
+  nofit: boolean;
+  /** どこが合わなかったか */
+  nofitReason: string;
+  /** 合わなかったと決めた日 YYYY-MM-DD（nofit でなければ空） */
+  nofitDate: string;
   createdAt: number;
 }
 
